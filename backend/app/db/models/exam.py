@@ -78,5 +78,5 @@ class SubTopic(Base):
     weightage_percent: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
 
     # Relationships
-    topic: Mapped["Topic"] = relationship("Topic", back_populates="subtopics")
+    topic: Mapped["Topic"] = relationship("Topic", back_populates="subtopics", lazy="selectin")
     questions: Mapped[List["Question"]] = relationship("Question", back_populates="subtopic")
