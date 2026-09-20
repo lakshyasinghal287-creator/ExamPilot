@@ -11,7 +11,7 @@
 
 ## 📌 Academic Context & Overview
 **ExamPilot** is an engineering mini-project developed for a 4-credit undergraduate B.Tech Computer Science & Engineering curriculum.
-* **Student Team:** Lakshya & Vaibhav Rawat
+* **Student Team:** Lakshya Singhal & Vaibhav Rawat
 * **Target Domain:** Common Admission Test (CAT) — VARC, DILR, and QA sections
 * **Objective:** Design, build, and empirically evaluate a verifiable test generation and diagnostic feedback system that operates under realistic CAT exam constraints with an explainable adaptive learning loop.
 
