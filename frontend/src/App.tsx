@@ -14,6 +14,26 @@ export function App() {
   const [serverHealthy, setServerHealthy] = useState<boolean>(false);
   const [candidateName] = useState<string>('Aarav Sharma');
 
+  // Theme State (Light vs Dark Mode)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('exampilot_theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('exampilot_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   // Active Exam Session State
   const [session, setSession] = useState<TestSession | null>(null);
   const [currentQIndex, setCurrentQIndex] = useState<number>(0);
@@ -174,12 +194,14 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#08090E] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
       {/* Conditionally render Nav / Header */}
       {activeView !== 'exam' ? (
         <EdTechNavbar
           activeView={activeView}
           serverHealthy={serverHealthy}
+          theme={theme}
+          onToggleTheme={toggleTheme}
           onNavigate={(v) => setActiveView(v)}
         />
       ) : (
