@@ -7,6 +7,7 @@ interface CatHeaderProps {
   timeRemainingSeconds: number;
   onOpenCalculator: () => void;
   onOpenQuestionPaper: () => void;
+  onSelectSection?: (sectionCode: string) => void;
 }
 
 export const CatHeader: React.FC<CatHeaderProps> = ({
@@ -16,6 +17,7 @@ export const CatHeader: React.FC<CatHeaderProps> = ({
   timeRemainingSeconds,
   onOpenCalculator,
   onOpenQuestionPaper,
+  onSelectSection,
 }) => {
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -84,16 +86,17 @@ export const CatHeader: React.FC<CatHeaderProps> = ({
           {sections.map((sec) => {
             const isActive = sec.code === activeSectionCode;
             return (
-              <div
+              <button
                 key={sec.code}
-                className={`px-3.5 py-1 text-xs font-bold transition-all rounded-t-xs ${
+                onClick={() => onSelectSection && onSelectSection(sec.code)}
+                className={`px-3.5 py-1 text-xs font-bold transition-all rounded-t-xs cursor-pointer ${
                   isActive
                     ? 'bg-[#fcfcfc] text-[#2b4458] shadow-sm border-t-2 border-blue-500'
-                    : 'bg-[#213545] text-stone-400 opacity-70 cursor-not-allowed'
+                    : 'bg-[#213545] text-stone-400 hover:text-white hover:bg-[#284054]'
                 }`}
               >
                 {sec.name} {isActive && <span className="text-[10px] ml-1 text-blue-600 font-semibold">• Active</span>}
-              </div>
+              </button>
             );
           })}
         </div>

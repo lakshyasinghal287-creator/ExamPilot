@@ -174,6 +174,21 @@ export function App() {
     setCurrentQIndex(index);
   };
 
+  // Action: Switch Section (VARC -> DILR -> QA)
+  const handleSelectSection = (sectionCode: string) => {
+    if (!session || !session.all_sections) return;
+    const targetSec = session.all_sections.find((s) => s.code === sectionCode);
+    if (targetSec) {
+      setSession({
+        ...session,
+        active_section: targetSec,
+      });
+      setCurrentQIndex(0);
+      setSelectedOptionId(targetSec.questions[0]?.selected_option_id ?? null);
+      setTitaText(targetSec.questions[0]?.tita_answer_text ?? '');
+    }
+  };
+
   // Action: Submit Exam
   const handleSubmitExam = async () => {
     if (!session) return;
@@ -212,6 +227,7 @@ export function App() {
           timeRemainingSeconds={timeRemaining}
           onOpenCalculator={() => setIsCalculatorOpen(true)}
           onOpenQuestionPaper={() => alert('Question paper view opens all section questions in a printable modal.')}
+          onSelectSection={handleSelectSection}
         />
       )}
 

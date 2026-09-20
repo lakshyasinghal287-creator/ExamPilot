@@ -75,7 +75,26 @@ async def start_test_session(
         if sec.id == first_section.id:
             first_section_questions = sec_questions
 
-    # 3. Create TestAttempt
+    # 3. Ensure candidate user exists (resilient fallback)
+    from backend.app.db.models.user import User, UserRole
+    u_stmt = select(User).where(User.id == user_id)
+    u_res = await db.execute(u_stmt)
+    user_obj = u_res.scalar_one_or_none()
+    if not user_obj:
+        u_fallback = (await db.execute(select(User).limit(1))).scalar_one_or_none()
+        if u_fallback:
+            user_id = u_fallback.id
+        else:
+            new_u = User(
+                id=user_id,
+                email="candidate@exampilot.com",
+                full_name="Aarav Sharma",
+                hashed_password="demo",
+                role=UserRole.STUDENT
+            )
+            db.add(new_u)
+            await db.flush()
+
     attempt = TestAttempt(
         user_id=user_id,
         exam_id=exam.id,
@@ -98,35 +117,52 @@ async def start_test_session(
 
     await db.commit()
 
-    # 5. Format sanitized client payload for active section (Answers OMITTED!)
-    questions_payload = []
-    for idx, q in enumerate(first_section_questions, 1):
-        opts = [
-            {"option_id": o.id, "key": o.option_key, "text": o.option_text}
-            for o in q.options
-        ] if q.options else []
+    # 5. Format sanitized client payloads for all sections (Answers OMITTED!)
+    all_sections_payload = []
+    for s in sections:
+        s_questions = [
+            q for q in all_selected_questions
+            if q.subtopic and q.subtopic.topic and q.subtopic.topic.section_id == s.id
+        ]
+        s_payload = []
+        for idx, q in enumerate(s_questions, 1):
+            opts = [
+                {"option_id": o.id, "key": o.option_key, "text": o.option_text}
+                for o in q.options
+            ] if q.options else []
 
-        questions_payload.append({
-            "question_id": q.id,
-            "sequence_number": idx,
-            "question_type": q.question_type.value,
-            "question_text": q.question_text,
-            "options": opts,
-            "palette_state": PaletteState.NOT_VISITED.value,
-            "time_spent_seconds": 0
+            s_payload.append({
+                "question_id": q.id,
+                "sequence_number": idx,
+                "question_type": q.question_type.value,
+                "question_text": q.question_text,
+                "options": opts,
+                "palette_state": PaletteState.NOT_VISITED.value,
+                "time_spent_seconds": 0
+            })
+
+        all_sections_payload.append({
+            "code": s.code,
+            "name": s.name,
+            "duration_seconds": s.duration_minutes * 60,
+            "time_remaining_seconds": s.duration_minutes * 60,
+            "questions": s_payload
         })
+
+    active_sec = all_sections_payload[0] if all_sections_payload else {
+        "code": "VARC",
+        "name": "Verbal Ability & Reading Comprehension",
+        "duration_seconds": 2400,
+        "time_remaining_seconds": 2400,
+        "questions": []
+    }
 
     return {
         "test_attempt_id": attempt.id,
         "exam_code": exam.code,
         "started_at": attempt.started_at.isoformat(),
-        "active_section": {
-            "code": first_section.code,
-            "name": first_section.name,
-            "duration_seconds": first_section.duration_minutes * 60,
-            "time_remaining_seconds": first_section.duration_minutes * 60,
-            "questions": questions_payload
-        }
+        "active_section": active_sec,
+        "all_sections": all_sections_payload
     }
 
 

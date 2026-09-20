@@ -38,6 +38,7 @@ export interface TestSession {
   exam_code: string;
   started_at: string;
   active_section: SectionPayload;
+  all_sections?: SectionPayload[];
 }
 
 export interface ScorecardSummary {
