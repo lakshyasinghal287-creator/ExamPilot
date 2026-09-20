@@ -1,5 +1,6 @@
 import React from 'react';
 import { ClientQuestion } from '../../types/exam';
+import { MathText } from './MathText';
 
 interface CatQuestionPaneProps {
   question: ClientQuestion | undefined;
@@ -35,22 +36,35 @@ export const CatQuestionPane: React.FC<CatQuestionPaneProps> = ({
   const negativeMarks = isMcq ? 1.0 : 0.0;
 
   // Split-screen logic for authentic CAT reading comprehension or DILR caselets
-  // If the text contains a distinct passage and question prompt, split into left/right panes
-  const hasPassageSplit = question.question_text.includes('\n\nQuestion:') || 
-                          question.question_text.includes('\n\nQ:') ||
-                          (question.question_text.length > 300 && question.question_text.includes('\n\n'));
+  // Real CAT CBT: Only RC passages and DILR caselets have the split-screen view.
+  // Verbal Ability (PJ, PS, Odd Sentence) and Quant are single pane.
+  const isVarcRc = question.question_text.startsWith('Passage:\n') || question.question_text.startsWith('Passage:');
+  const isDilrCaselet = question.question_text.startsWith('Caselet:\n') || question.question_text.startsWith('Caselet:');
+  const hasPassageSplit = isVarcRc || isDilrCaselet;
 
   let passageText = '';
   let questionPrompt = question.question_text;
+  let paneLabel = 'Passage / Context';
 
   if (hasPassageSplit) {
-    const splitIndex = question.question_text.indexOf('\n\nQuestion:') !== -1 
-      ? question.question_text.indexOf('\n\nQuestion:') 
-      : question.question_text.lastIndexOf('\n\n');
+    paneLabel = isDilrCaselet 
+      ? 'Data Interpretation & Logical Reasoning Caselet' 
+      : 'Reading Comprehension Passage';
 
+    const splitIndex = question.question_text.indexOf('\n\nQuestion:');
     if (splitIndex !== -1) {
-      passageText = question.question_text.substring(0, splitIndex).replace(/^Passage:\s*/i, '').trim();
-      questionPrompt = question.question_text.substring(splitIndex).replace(/^\n\n(Question:)?\s*/i, '').trim();
+      passageText = question.question_text.substring(0, splitIndex)
+        .replace(/^(Passage|Caselet):\s*/i, '').trim();
+      questionPrompt = question.question_text.substring(splitIndex)
+        .replace(/^\n\nQuestion:\s*/i, '').trim();
+    } else {
+      const lastDoubleNewline = question.question_text.lastIndexOf('\n\n');
+      if (lastDoubleNewline !== -1) {
+        passageText = question.question_text.substring(0, lastDoubleNewline)
+          .replace(/^(Passage|Caselet):\s*/i, '').trim();
+        questionPrompt = question.question_text.substring(lastDoubleNewline)
+          .replace(/^\n\n(Question:)?\s*/i, '').trim();
+      }
     }
   }
 
@@ -78,10 +92,10 @@ export const CatQuestionPane: React.FC<CatQuestionPaneProps> = ({
         {passageText ? (
           <div className="md:w-1/2 p-5 border-r border-stone-200 overflow-y-auto bg-[#fafafa] text-xs sm:text-sm leading-relaxed text-stone-800 font-serif">
             <div className="mb-2 text-[11px] font-sans font-bold uppercase tracking-wider text-stone-500 pb-1 border-b border-stone-200">
-              Passage / Context
+              {paneLabel}
             </div>
             <div className="whitespace-pre-line leading-6">
-              {passageText}
+              <MathText text={passageText} />
             </div>
           </div>
         ) : null}
@@ -90,8 +104,8 @@ export const CatQuestionPane: React.FC<CatQuestionPaneProps> = ({
         <div className={`${passageText ? 'md:w-1/2' : 'w-full'} p-5 sm:p-6 overflow-y-auto flex flex-col justify-between`}>
           <div>
             {/* Question Text */}
-            <div className="text-sm sm:text-base font-medium text-stone-900 leading-relaxed pb-5 border-b border-stone-100">
-              {questionPrompt}
+            <div className="text-sm sm:text-base font-medium text-stone-900 leading-relaxed pb-5 border-b border-stone-100 whitespace-pre-wrap">
+              <MathText text={questionPrompt} />
             </div>
 
             {/* Answer Options */}
@@ -119,7 +133,7 @@ export const CatQuestionPane: React.FC<CatQuestionPaneProps> = ({
                         />
                         <div className="ml-3 flex items-start space-x-2">
                           <span className="font-bold text-stone-600">({opt.key})</span>
-                          <span>{opt.text}</span>
+                          <span><MathText text={opt.text} /></span>
                         </div>
                       </label>
                     );

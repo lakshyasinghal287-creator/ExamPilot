@@ -63,7 +63,7 @@ async def seed_database(reseed: bool = False):
             code="CAT-2026",
             name="Common Admission Test 2026",
             total_duration_minutes=120,
-            total_questions=66,
+            total_questions=68,
             is_active=True
         )
         session.add(cat_exam)
@@ -78,14 +78,14 @@ async def seed_database(reseed: bool = False):
             duration_minutes=40,
             target_question_count=24
         )
-        # Section 2: DILR (20 Questions, 40 min)
+        # Section 2: DILR (22 Questions, 40 min: 3 sets of 4 + 2 sets of 5)
         sec_dilr = Section(
             exam_id=cat_exam.id,
             code="DILR",
             name="Data Interpretation & Logical Reasoning",
             sequence_order=2,
             duration_minutes=40,
-            target_question_count=20
+            target_question_count=22
         )
         # Section 3: QA (22 Questions, 40 min)
         sec_qa = Section(

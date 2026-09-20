@@ -64,6 +64,7 @@ async def start_test_session(
                 select(Question)
                 .where(Question.subtopic_id.in_(subtopic_ids))
                 .where(Question.validation_status == ValidationStatus.VALIDATED)
+                .order_by(Question.id.asc())
                 .limit(sec.target_question_count)
             )
             q_res = await db.execute(q_stmt)
