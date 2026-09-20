@@ -5,7 +5,9 @@ interface CatPaletteProps {
   questions: ClientQuestion[];
   currentQuestionIndex: number;
   candidateName: string;
+  activeSectionCode?: string;
   onSelectQuestion: (index: number) => void;
+  onSubmitSection?: () => void;
   onSubmitExam: () => void;
 }
 
@@ -13,7 +15,9 @@ export const CatPalette: React.FC<CatPaletteProps> = ({
   questions,
   currentQuestionIndex,
   candidateName,
+  activeSectionCode,
   onSelectQuestion,
+  onSubmitSection,
   onSubmitExam,
 }) => {
   const counts = {
@@ -44,6 +48,15 @@ export const CatPalette: React.FC<CatPaletteProps> = ({
         return base + 'cat-btn-unvisited';
     }
   };
+
+  const isFinalSection = activeSectionCode === 'QA';
+  const buttonLabel = isFinalSection
+    ? 'Submit CAT Examination'
+    : activeSectionCode === 'VARC'
+    ? 'Save & Proceed to DILR'
+    : 'Save & Proceed to QA';
+
+  const handleAction = isFinalSection ? onSubmitExam : (onSubmitSection || onSubmitExam);
 
   return (
     <aside className="w-72 sm:w-80 bg-[#edf2f6] border-l border-stone-300 flex flex-col h-full select-none text-stone-800 font-sans">
@@ -121,10 +134,12 @@ export const CatPalette: React.FC<CatPaletteProps> = ({
       {/* Bottom Submit Button */}
       <div className="p-3 bg-[#e6ebef] border-t border-stone-300">
         <button
-          onClick={onSubmitExam}
-          className="w-full py-2 bg-[#22c55e] hover:bg-[#16a34a] text-white text-xs font-bold uppercase tracking-wider rounded shadow-xs transition-colors cursor-pointer"
+          onClick={handleAction}
+          className={`w-full py-2.5 text-white text-xs font-bold uppercase tracking-wider rounded shadow-xs transition-colors cursor-pointer ${
+            isFinalSection ? 'bg-[#22c55e] hover:bg-[#16a34a]' : 'bg-[#1b74e4] hover:bg-[#155fc0]'
+          }`}
         >
-          Submit Section
+          {buttonLabel}
         </button>
       </div>
     </aside>

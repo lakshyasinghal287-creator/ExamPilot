@@ -104,7 +104,7 @@ export function App() {
     }
   };
 
-  // Helper to update local question state in palette
+  // Helper to update local question state in palette and sync all_sections
   const updateQuestionState = (state: PaletteState, optionId: string | null, textVal: string | null) => {
     if (!session) return;
     const updated = [...session.active_section.questions];
@@ -115,12 +115,22 @@ export function App() {
       tita_answer_text: textVal,
       time_spent_seconds: updated[currentQIndex].time_spent_seconds + 5,
     };
+
+    const updatedAllSections = session.all_sections
+      ? session.all_sections.map((sec) =>
+          sec.code === session.active_section.code
+            ? { ...sec, questions: updated }
+            : sec
+        )
+      : undefined;
+
     setSession({
       ...session,
       active_section: {
         ...session.active_section,
         questions: updated,
       },
+      all_sections: updatedAllSections,
     });
 
     // Auto-save to server asynchronously
@@ -167,7 +177,6 @@ export function App() {
 
   // Action: Select Question from Palette
   const handleSelectQuestion = (index: number) => {
-    // If navigating away from unvisited, mark current as not answered if nothing selected
     if (currentQuestion && currentQuestion.palette_state === 'NOT_VISITED') {
       updateQuestionState('NOT_ANSWERED', selectedOptionId, titaText);
     }
@@ -186,6 +195,19 @@ export function App() {
       setCurrentQIndex(0);
       setSelectedOptionId(targetSec.questions[0]?.selected_option_id ?? null);
       setTitaText(targetSec.questions[0]?.tita_answer_text ?? '');
+    }
+  };
+
+  // Action: Submit Section & Proceed to Next Section
+  const handleSubmitSection = () => {
+    if (!session || !session.all_sections) return;
+    const currentCode = session.active_section.code;
+    if (currentCode === 'VARC') {
+      handleSelectSection('DILR');
+    } else if (currentCode === 'DILR') {
+      handleSelectSection('QA');
+    } else {
+      handleSubmitExam();
     }
   };
 
@@ -208,40 +230,71 @@ export function App() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors">
-      {/* Conditionally render Nav / Header */}
-      {activeView !== 'exam' ? (
-        <EdTechNavbar
-          activeView={activeView}
-          serverHealthy={serverHealthy}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onNavigate={(v) => setActiveView(v)}
-        />
-      ) : (
+  // If in Exam mode, render dedicated full-viewport TCS iON layout (ZERO black void)
+  if (activeView === 'exam' && session) {
+    return (
+      <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#e6ebef] font-sans select-none">
         <CatHeader
-          examName={session?.exam_code ? `Common Admission Test (${session.exam_code})` : 'CAT 2026 Examination'}
+          examName={session.exam_code ? `Common Admission Test (${session.exam_code})` : 'CAT 2026 Examination'}
           candidateName={candidateName}
-          activeSectionCode={session?.active_section.code ?? 'VARC'}
+          activeSectionCode={session.active_section.code}
           timeRemainingSeconds={timeRemaining}
           onOpenCalculator={() => setIsCalculatorOpen(true)}
-          onOpenQuestionPaper={() => alert('Question paper view opens all section questions in a printable modal.')}
+          onOpenQuestionPaper={() => alert('Question paper view: Opens complete section paper.')}
           onSelectSection={handleSelectSection}
         />
-      )}
 
-      {/* Main Screen Body */}
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+          <CatQuestionPane
+            question={currentQuestion}
+            selectedOptionId={selectedOptionId}
+            titaText={titaText}
+            onSelectOption={(optId) => setSelectedOptionId(optId)}
+            onChangeTita={(val) => setTitaText(val)}
+            onSaveAndNext={handleSaveAndNext}
+            onClearResponse={handleClearResponse}
+            onMarkForReviewAndNext={handleMarkForReviewAndNext}
+          />
+
+          <CatPalette
+            questions={session.active_section.questions}
+            currentQuestionIndex={currentQIndex}
+            candidateName={candidateName}
+            activeSectionCode={session.active_section.code}
+            onSelectQuestion={handleSelectQuestion}
+            onSubmitSection={handleSubmitSection}
+            onSubmitExam={handleSubmitExam}
+          />
+        </div>
+
+        <CatCalculator
+          isOpen={isCalculatorOpen}
+          onClose={() => setIsCalculatorOpen(false)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors">
+      <EdTechNavbar
+        activeView={activeView}
+        serverHealthy={serverHealthy}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onNavigate={(v) => setActiveView(v)}
+      />
+
       <div className="flex-1 flex flex-col relative">
         {isLoading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-xs flex items-center justify-center z-50">
-            <div className="text-sm font-semibold text-blue-600 animate-pulse">
+            <div className="text-sm font-semibold text-indigo-600 animate-pulse">
               Communicating with CAT Exam Engine...
             </div>
           </div>
         )}
         {errorMessage && activeView === 'dashboard' && (
-          <div className="max-w-7xl mx-auto px-4 mt-4 w-full">
+          <div className="max-w-5xl mx-auto px-4 mt-4 w-full">
             <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-center justify-between">
               <span>{errorMessage}</span>
               <button onClick={() => setErrorMessage(null)} className="text-rose-500 font-bold">×</button>
@@ -252,34 +305,9 @@ export function App() {
         {activeView === 'dashboard' && (
           <DashboardHome
             onStartExam={handleStartExam}
-            onOpenPractice={() => alert('Practice drill selector: Choose Section, Subtopic, and Target Difficulty to begin targeted remediation.')}
+            onOpenPractice={() => alert('Practice drill selector: Select Section, Subtopic, and Target Difficulty.')}
             serverHealthy={serverHealthy}
           />
-        )}
-
-        {activeView === 'exam' && session && (
-          <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden">
-            {/* Left: Authentic CAT Question Pane */}
-            <CatQuestionPane
-              question={currentQuestion}
-              selectedOptionId={selectedOptionId}
-              titaText={titaText}
-              onSelectOption={(optId) => setSelectedOptionId(optId)}
-              onChangeTita={(val) => setTitaText(val)}
-              onSaveAndNext={handleSaveAndNext}
-              onClearResponse={handleClearResponse}
-              onMarkForReviewAndNext={handleMarkForReviewAndNext}
-            />
-
-            {/* Right: Authentic 5-Color TCS iON Palette */}
-            <CatPalette
-              questions={session.active_section.questions}
-              currentQuestionIndex={currentQIndex}
-              candidateName={candidateName}
-              onSelectQuestion={handleSelectQuestion}
-              onSubmitExam={handleSubmitExam}
-            />
-          </div>
         )}
 
         {activeView === 'scorecard' && (
@@ -289,12 +317,6 @@ export function App() {
           />
         )}
       </div>
-
-      {/* On-Screen CAT Calculator Modal */}
-      <CatCalculator
-        isOpen={isCalculatorOpen}
-        onClose={() => setIsCalculatorOpen(false)}
-      />
     </div>
   );
 }
