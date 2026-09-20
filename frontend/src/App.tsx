@@ -44,6 +44,7 @@ export function App() {
   const [scorecardData, setScorecardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [completedSections, setCompletedSections] = useState<string[]>([]);
 
   const timerRef = useRef<any>(null);
 
@@ -55,14 +56,47 @@ export function App() {
       .catch(() => setServerHealthy(false));
   }, []);
 
-  // Section Countdown Timer
+  // Handle Section Timeout (40 minutes expires for a section in real CAT)
+  const handleSectionTimeout = () => {
+    if (!session || !session.all_sections) return;
+    const currentCode = session.active_section.code;
+
+    if (currentCode === 'VARC') {
+      alert('Time has expired for Section 1 (VARC). Your responses are locked under CAT CBT rules. Transitioning to Section 2 (DILR).');
+      setCompletedSections((prev) => [...prev, 'VARC']);
+      const dilrSec = session.all_sections.find((s) => s.code === 'DILR');
+      if (dilrSec) {
+        setSession({ ...session, active_section: dilrSec });
+        setCurrentQIndex(0);
+        setSelectedOptionId(dilrSec.questions[0]?.selected_option_id ?? null);
+        setTitaText(dilrSec.questions[0]?.tita_answer_text ?? '');
+        setTimeRemaining(dilrSec.duration_seconds || 2400);
+      }
+    } else if (currentCode === 'DILR') {
+      alert('Time has expired for Section 2 (DILR). Your responses are locked under CAT CBT rules. Transitioning to Section 3 (QA).');
+      setCompletedSections((prev) => [...prev, 'DILR']);
+      const qaSec = session.all_sections.find((s) => s.code === 'QA');
+      if (qaSec) {
+        setSession({ ...session, active_section: qaSec });
+        setCurrentQIndex(0);
+        setSelectedOptionId(qaSec.questions[0]?.selected_option_id ?? null);
+        setTitaText(qaSec.questions[0]?.tita_answer_text ?? '');
+        setTimeRemaining(qaSec.duration_seconds || 2400);
+      }
+    } else {
+      alert('Time has expired for Section 3 (QA). Submitting your CAT examination now.');
+      handleSubmitExam();
+    }
+  };
+
+  // Section Countdown Timer (40 minutes per section)
   useEffect(() => {
     if (activeView === 'exam' && timeRemaining > 0) {
       timerRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current);
-            handleSubmitExam();
+            handleSectionTimeout();
             return 0;
           }
           return prev - 1;
@@ -73,7 +107,7 @@ export function App() {
     }
 
     return () => clearInterval(timerRef.current);
-  }, [activeView, timeRemaining]);
+  }, [activeView, timeRemaining, session]);
 
   // Sync selected options when switching question
   const currentQuestion: ClientQuestion | undefined = session?.active_section.questions[currentQIndex];
@@ -89,6 +123,7 @@ export function App() {
   const handleStartExam = async () => {
     setIsLoading(true);
     setErrorMessage(null);
+    setCompletedSections([]);
     try {
       // In production/demo, use default user ID from seed or fresh ID
       const newSession = await examApi.startTest('seed-student-user-id', 'CAT-2026');
@@ -183,29 +218,60 @@ export function App() {
     setCurrentQIndex(index);
   };
 
-  // Action: Switch Section (VARC -> DILR -> QA)
+  // Action: Switch Section (CAT CBT Rules: Manual section jumping prohibited)
   const handleSelectSection = (sectionCode: string) => {
-    if (!session || !session.all_sections) return;
-    const targetSec = session.all_sections.find((s) => s.code === sectionCode);
-    if (targetSec) {
-      setSession({
-        ...session,
-        active_section: targetSec,
-      });
-      setCurrentQIndex(0);
-      setSelectedOptionId(targetSec.questions[0]?.selected_option_id ?? null);
-      setTitaText(targetSec.questions[0]?.tita_answer_text ?? '');
+    if (!session) return;
+    if (sectionCode === session.active_section.code) return;
+
+    if (completedSections.includes(sectionCode)) {
+      alert(`Section ${sectionCode} has already been submitted and locked. CAT CBT regulations prohibit returning to previous sections.`);
+      return;
     }
+
+    alert(`Section ${sectionCode} is currently locked. In the official CAT CBT, you cannot navigate between sections freely. You must complete and submit Section ${session.active_section.code} first.`);
   };
 
   // Action: Submit Section & Proceed to Next Section
   const handleSubmitSection = () => {
     if (!session || !session.all_sections) return;
     const currentCode = session.active_section.code;
+
     if (currentCode === 'VARC') {
-      handleSelectSection('DILR');
+      const confirmProceed = window.confirm(
+        'Submit Section 1 (VARC)?\n\nUnder official CAT CBT guidelines, once Section 1 is submitted, it is permanently locked and you CANNOT return to it. Proceed to Section 2 (DILR)?'
+      );
+      if (!confirmProceed) return;
+
+      setCompletedSections((prev) => [...prev, 'VARC']);
+      const dilrSec = session.all_sections.find((s) => s.code === 'DILR');
+      if (dilrSec) {
+        setSession({
+          ...session,
+          active_section: dilrSec,
+        });
+        setCurrentQIndex(0);
+        setSelectedOptionId(dilrSec.questions[0]?.selected_option_id ?? null);
+        setTitaText(dilrSec.questions[0]?.tita_answer_text ?? '');
+        setTimeRemaining(dilrSec.duration_seconds || 2400);
+      }
     } else if (currentCode === 'DILR') {
-      handleSelectSection('QA');
+      const confirmProceed = window.confirm(
+        'Submit Section 2 (DILR)?\n\nUnder official CAT CBT guidelines, once Section 2 is submitted, it is permanently locked and you CANNOT return to it. Proceed to Section 3 (QA)?'
+      );
+      if (!confirmProceed) return;
+
+      setCompletedSections((prev) => [...prev, 'DILR']);
+      const qaSec = session.all_sections.find((s) => s.code === 'QA');
+      if (qaSec) {
+        setSession({
+          ...session,
+          active_section: qaSec,
+        });
+        setCurrentQIndex(0);
+        setSelectedOptionId(qaSec.questions[0]?.selected_option_id ?? null);
+        setTitaText(qaSec.questions[0]?.tita_answer_text ?? '');
+        setTimeRemaining(qaSec.duration_seconds || 2400);
+      }
     } else {
       handleSubmitExam();
     }
@@ -239,6 +305,7 @@ export function App() {
           candidateName={candidateName}
           activeSectionCode={session.active_section.code}
           timeRemainingSeconds={timeRemaining}
+          completedSections={completedSections}
           onOpenCalculator={() => setIsCalculatorOpen(true)}
           onOpenQuestionPaper={() => alert('Question paper view: Opens complete section paper.')}
           onSelectSection={handleSelectSection}

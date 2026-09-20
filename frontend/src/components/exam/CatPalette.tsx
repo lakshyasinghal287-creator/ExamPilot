@@ -53,8 +53,8 @@ export const CatPalette: React.FC<CatPaletteProps> = ({
   const buttonLabel = isFinalSection
     ? 'Submit CAT Examination'
     : activeSectionCode === 'VARC'
-    ? 'Save & Proceed to DILR'
-    : 'Save & Proceed to QA';
+    ? 'Submit Section 1 & Proceed to DILR'
+    : 'Submit Section 2 & Proceed to QA';
 
   const handleAction = isFinalSection ? onSubmitExam : (onSubmitSection || onSubmitExam);
 

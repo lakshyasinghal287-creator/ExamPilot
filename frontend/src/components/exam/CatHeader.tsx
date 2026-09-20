@@ -5,6 +5,7 @@ interface CatHeaderProps {
   candidateName: string;
   activeSectionCode: string;
   timeRemainingSeconds: number;
+  completedSections?: string[];
   onOpenCalculator: () => void;
   onOpenQuestionPaper: () => void;
   onSelectSection?: (sectionCode: string) => void;
@@ -15,6 +16,7 @@ export const CatHeader: React.FC<CatHeaderProps> = ({
   candidateName,
   activeSectionCode,
   timeRemainingSeconds,
+  completedSections = [],
   onOpenCalculator,
   onOpenQuestionPaper,
   onSelectSection,
@@ -80,22 +82,49 @@ export const CatHeader: React.FC<CatHeaderProps> = ({
 
       {/* Section Switcher & Remaining Section Timer Bar */}
       <div className="px-4 py-1.5 bg-[#2b4458] flex items-center justify-between text-xs">
-        {/* Sections Tabs */}
-        <div className="flex items-center space-x-1">
-          <span className="text-stone-300 text-xs font-medium mr-2">Sections:</span>
+        {/* Sections Tabs (Locked CAT CBT Sequential Rule) */}
+        <div className="flex items-center space-x-1.5">
+          <span className="text-stone-300 text-xs font-semibold mr-1">Sections:</span>
           {sections.map((sec) => {
             const isActive = sec.code === activeSectionCode;
+            const isCompleted = completedSections.includes(sec.code);
+            const isLocked = !isActive && !isCompleted;
+
             return (
               <button
                 key={sec.code}
-                onClick={() => onSelectSection && onSelectSection(sec.code)}
-                className={`px-3.5 py-1 text-xs font-bold transition-all rounded-t-xs cursor-pointer ${
+                disabled={!isActive}
+                onClick={() => {
+                  if (isActive) return;
+                  if (onSelectSection) {
+                    onSelectSection(sec.code);
+                  }
+                }}
+                className={`px-3 py-1 text-xs font-bold transition-all rounded-t-xs flex items-center space-x-1.5 ${
                   isActive
-                    ? 'bg-[#fcfcfc] text-[#2b4458] shadow-sm border-t-2 border-blue-500'
-                    : 'bg-[#213545] text-stone-400 hover:text-white hover:bg-[#284054]'
+                    ? 'bg-[#fcfcfc] text-[#2b4458] shadow-sm border-t-2 border-blue-500 cursor-default'
+                    : isCompleted
+                    ? 'bg-[#1e2f3d] text-emerald-400 opacity-90 border-t border-emerald-500/40 cursor-not-allowed'
+                    : 'bg-[#182733] text-stone-400 opacity-75 cursor-not-allowed border-t border-transparent'
                 }`}
+                title={
+                  isActive
+                    ? `Current Active Section: ${sec.name}`
+                    : isCompleted
+                    ? `Section ${sec.name} submitted & locked`
+                    : `Section ${sec.name} locked (Must finish previous section first)`
+                }
               >
-                {sec.name} {isActive && <span className="text-[10px] ml-1 text-blue-600 font-semibold">• Active</span>}
+                <span>{sec.name}</span>
+                {isActive && (
+                  <span className="text-[10px] text-blue-600 font-semibold">• Active</span>
+                )}
+                {isCompleted && (
+                  <span className="text-[10px] text-emerald-400 font-semibold">✓ Done</span>
+                )}
+                {isLocked && (
+                  <span className="text-[10px] text-stone-500 font-mono">🔒 Locked</span>
+                )}
               </button>
             );
           })}
