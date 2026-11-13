@@ -89,16 +89,46 @@ ExamPilot/
 ## 📋 Phased Development Lifecycle
 
 * [x] **Phase 0:** Project Initialization, Governance, & ADR Blueprint
-* [ ] **Phase 1:** Requirements Engineering & CAT Taxonomy Specification
-* [ ] **Phase 2:** Formal Software Requirements Specification (SRS)
-* [ ] **Phase 3:** Domain Modeling, Entity Relationships, & Class Diagrams
-* [ ] **Phase 4:** System Architecture & C4 Component Design
-* [ ] **Phase 5:** Relational Database Schema & Repository Layer
-* [ ] **Phase 6:** RESTful API Design & OpenAPI Contracts
-* [ ] **Phase 7:** AI Provider Abstraction & Deterministic Validation Pipeline
-* [ ] **Phase 8:** MVP Test Simulation Engine & CAT Scoring Core
-* [ ] **Phase 9:** Diagnostic Analytics & Explainable Recommendation Engine
+* [x] **Phase 1:** Requirements Engineering & CAT Taxonomy Specification
+* [x] **Phase 2:** Formal Software Requirements Specification (SRS)
+* [x] **Phase 3:** Domain Modeling, Entity Relationships, & Class Diagrams
+* [x] **Phase 4:** System Architecture & C4 Component Design
+* [x] **Phase 5:** Relational Database Schema & Repository Layer
+* [x] **Phase 6:** RESTful API Design & OpenAPI Contracts
+* [x] **Phase 7:** AI Provider Abstraction & Deterministic Validation Pipeline
+* [x] **Phase 8:** MVP Test Simulation Engine & CAT Scoring Core
+* [x] **Phase 9:** Diagnostic Analytics & Explainable Recommendation Engine
 * [ ] **Phase 10:** Comprehensive Verification, Empirical Evaluation, & Viva Defense
+
+---
+
+## 🚀 Quick Start (Local Development)
+
+### Prerequisites
+- Python 3.11+ · Node.js 18+ · pnpm
+
+### Backend
+```bash
+# 1. Install dependencies
+pip install -r backend/requirements.txt
+
+# 2. Seed the database (run once; use --reseed to repopulate)
+python scripts/seed_cat_data.py
+python scripts/seed_extended_questions.py
+python scripts/seed_topup_questions.py
+
+# 3. Start FastAPI server
+uvicorn backend.app.main:app --reload --port 8000
+# → Swagger UI at http://localhost:8000/docs
+```
+
+### Frontend
+```bash
+cd frontend
+pnpm install
+pnpm dev
+# → React app at http://localhost:5173
+```
 
 ---
 

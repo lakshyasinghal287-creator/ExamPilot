@@ -12,7 +12,9 @@ import { TestSession, ClientQuestion, PaletteState } from './types/exam';
 export function App() {
   const [activeView, setActiveView] = useState<'dashboard' | 'exam' | 'scorecard'>('dashboard');
   const [serverHealthy, setServerHealthy] = useState<boolean>(false);
-  const [candidateName] = useState<string>('Aarav Sharma');
+  const [candidateName, setCandidateName] = useState<string>(() =>
+    localStorage.getItem('exampilot_name') || 'Aarav Sharma'
+  );
 
   // Theme State (Light vs Dark Mode)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -121,11 +123,17 @@ export function App() {
 
   // Launch Full CAT Mock
   const handleStartExam = async () => {
+    // Ask for candidate name if not set
+    const name = window.prompt('Enter your name for this test session:', candidateName);
+    if (name && name.trim()) {
+      setCandidateName(name.trim());
+      localStorage.setItem('exampilot_name', name.trim());
+    }
     setIsLoading(true);
     setErrorMessage(null);
     setCompletedSections([]);
     try {
-      // In production/demo, use default user ID from seed or fresh ID
+      // Uses the seeded student user; test_engine falls back to any available user
       const newSession = await examApi.startTest('seed-student-user-id', 'CAT-2026');
       setSession(newSession);
       setCurrentQIndex(0);

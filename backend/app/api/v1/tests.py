@@ -15,6 +15,7 @@ from backend.app.services.test_engine import (
     save_question_response,
     submit_and_score_exam,
 )
+from backend.app.services.diagnostics import compute_and_persist_diagnostics
 
 router = APIRouter(prefix="/tests", tags=["Tests"])
 
@@ -97,6 +98,17 @@ async def finish_exam(
             test_attempt_id=attempt_id,
             db=db
         )
+        # Phase 9: Auto-compute diagnostics immediately after scoring
+        try:
+            diagnostics = await compute_and_persist_diagnostics(
+                test_attempt_id=attempt_id,
+                db=db
+            )
+            summary["diagnostics"] = diagnostics
+        except Exception as diag_err:
+            # Diagnostics failure must never block scorecard delivery
+            summary["diagnostics"] = {"error": str(diag_err)}
+
         return summary
     except ValueError as val_err:
         raise HTTPException(
