@@ -1,12 +1,12 @@
 """
 Exams API Router.
-Provides read-only access to available exams and their sections.
+Provides access to available exams, sections, and automated full paper generation.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import List
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 from backend.app.db.session import get_db
@@ -29,6 +29,10 @@ class ExamInfo(BaseModel):
     total_duration_minutes: int
     total_questions: int
     sections: List[SectionInfo]
+
+
+class GenerateAiMockRequest(BaseModel):
+    custom_title: Optional[str] = None
 
 
 @router.get("/", response_model=List[ExamInfo])
@@ -63,6 +67,26 @@ async def list_exams(db: AsyncSession = Depends(get_db)):
     return out
 
 
+@router.post("/generate-ai-mock", status_code=status.HTTP_201_CREATED)
+async def generate_ai_mock_endpoint(
+    request: GenerateAiMockRequest = GenerateAiMockRequest(),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Synthesizes a full, authentic 66-question CAT mock exam using Google Gemini AI,
+    complete with SymPy math verification and multi-section taxonomy.
+    """
+    from backend.app.services.ai_paper_generator import generate_complete_ai_cat_exam
+    try:
+        result = await generate_complete_ai_cat_exam(db, custom_title=request.custom_title)
+        return result
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to synthesize complete AI mock exam: {str(exc)}"
+        )
+
+
 @router.get("/{exam_code}", response_model=ExamInfo)
 async def get_exam(exam_code: str, db: AsyncSession = Depends(get_db)):
     """Return a specific exam by code."""
@@ -90,4 +114,3 @@ async def get_exam(exam_code: str, db: AsyncSession = Depends(get_db)):
             for s in sections
         ],
     )
-

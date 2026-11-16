@@ -296,3 +296,4 @@ export const AiPracticeModal: React.FC<AiPracticeModalProps> = ({ isOpen, onClos
     </div>
   );
 };
+

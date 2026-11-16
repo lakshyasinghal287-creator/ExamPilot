@@ -241,3 +241,29 @@ async def test_generate_live_question_endpoint(integration_db_and_client, monkey
     assert data["status"] == "VALIDATED"
     assert data["math_verified"] is True
     assert data["question"]["correct_answer"] == "A"
+
+
+@pytest.mark.asyncio
+async def test_generate_full_ai_mock_exam_endpoint(integration_db_and_client, monkeypatch):
+    client = integration_db_and_client["client"]
+    from backend.app.ai_pipeline.provider import MockLLMProvider
+    from backend.app.services import ai_paper_generator
+
+    # Monkeypatch LLM provider in ai_paper_generator so test runs offline & instant
+    monkeypatch.setattr(ai_paper_generator, "get_llm_provider", lambda: MockLLMProvider())
+
+    res = await client.post("/api/v1/exams/generate-ai-mock", json={"custom_title": "AI Test Mock"})
+    assert res.status_code == 201
+    data = res.json()
+    assert data["status"] == "SUCCESS"
+    assert data["total_questions"] == 66
+    assert data["sections"]["VARC"] == 24
+    assert data["sections"]["DILR"] == 20
+    assert data["sections"]["QA"] == 22
+    assert "CAT-AI-MOCK" in data["exam_code"]
+
+    # Verify that the new exam appears in list_exams
+    list_res = await client.get("/api/v1/exams/")
+    assert list_res.status_code == 200
+    exam_codes = [e["code"] for e in list_res.json()]
+    assert data["exam_code"] in exam_codes

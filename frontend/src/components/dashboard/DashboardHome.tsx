@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Play, Clock, BookOpen, CheckCircle, ChevronRight, BarChart2, Shield, Sparkles } from 'lucide-react';
+import { Play, Clock, BookOpen, CheckCircle, ChevronRight, BarChart2, Shield, Sparkles, PlusCircle } from 'lucide-react';
 import { ExamInfo } from '../../services/api';
 import { AiPracticeModal } from '../practice/AiPracticeModal';
+import { GenerateAiMockModal } from '../exam/GenerateAiMockModal';
 
 interface DashboardHomeProps {
   onStartExam: (examCode?: string) => void;
   availableExams?: ExamInfo[];
   selectedExamCode?: string;
   onSelectExam?: (code: string) => void;
+  onRefreshExams?: (newExamCode?: string) => void;
   serverHealthy: boolean;
 }
 
@@ -16,9 +18,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   availableExams = [],
   selectedExamCode,
   onSelectExam,
+  onRefreshExams,
   serverHealthy,
 }) => {
   const [isAiPracticeOpen, setIsAiPracticeOpen] = useState(false);
+  const [isGenerateMockOpen, setIsGenerateMockOpen] = useState(false);
 
   // Active exam details (fall back to first available or default)
   const activeExam =
@@ -61,11 +65,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             </button>
 
             <button
-              onClick={() => setIsAiPracticeOpen(true)}
-              className="px-5 py-3 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 font-medium text-sm rounded-xl transition-colors flex items-center space-x-2 cursor-pointer shadow-xs"
+              onClick={() => setIsGenerateMockOpen(true)}
+              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl shadow-xs transition-colors flex items-center space-x-2 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>AI Practice Drills (Gemini)</span>
+              <Sparkles className="w-4 h-4 text-emerald-200" />
+              <span>Generate Full AI Mock (Gemini)</span>
+            </button>
+
+            <button
+              onClick={() => setIsAiPracticeOpen(true)}
+              className="px-5 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-medium text-sm rounded-xl transition-colors flex items-center space-x-2 cursor-pointer shadow-xs"
+            >
+              <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Practice Drills</span>
             </button>
           </div>
         </div>
@@ -127,9 +139,18 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
       {/* 4. Available Full Mocks (Dynamic from Server) */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          Available Full Mocks
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Available Full Mocks
+          </h2>
+          <button
+            onClick={() => setIsGenerateMockOpen(true)}
+            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center space-x-1 cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>Generate New AI Mock</span>
+          </button>
+        </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
           {(availableExams.length > 0 ? availableExams : [activeExam]).filter(Boolean).map((exam, i) => (
@@ -167,6 +188,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       <AiPracticeModal
         isOpen={isAiPracticeOpen}
         onClose={() => setIsAiPracticeOpen(false)}
+      />
+
+      {/* Full 66-Question AI Mock Paper Generator Modal */}
+      <GenerateAiMockModal
+        isOpen={isGenerateMockOpen}
+        onClose={() => setIsGenerateMockOpen(false)}
+        onExamCreated={(newCode) => {
+          if (onRefreshExams) onRefreshExams(newCode);
+        }}
       />
     </div>
   );

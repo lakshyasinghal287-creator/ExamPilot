@@ -37,6 +37,20 @@ export const examApi = {
     return res.data;
   },
 
+  // Synthesize a full fresh 66-question AI CAT Mock Exam
+  async generateAiMock(customTitle?: string): Promise<{
+    status: string;
+    exam_code: string;
+    exam_name: string;
+    total_questions: number;
+    sections: { VARC: number; DILR: number; QA: number };
+  }> {
+    const res = await apiClient.post('/exams/generate-ai-mock', {
+      custom_title: customTitle,
+    });
+    return res.data;
+  },
+
   // Start a new test attempt
   async startTest(userId: string, examCode: string): Promise<TestSession> {
     const res = await apiClient.post<TestSession>('/tests/start', {

@@ -68,6 +68,18 @@ export function App() {
   const timerRef = useRef<any>(null);
 
   // Check backend server health and load available exams at startup
+  const refreshExams = async (newExamCode?: string) => {
+    try {
+      const exams = await examApi.listExams();
+      setAvailableExams(exams);
+      if (newExamCode) {
+        setSelectedExamCode(newExamCode);
+      }
+    } catch (err) {
+      console.error('Failed to load exams:', err);
+    }
+  };
+
   useEffect(() => {
     examApi
       .checkHealth()
@@ -431,6 +443,7 @@ export function App() {
             availableExams={availableExams}
             selectedExamCode={selectedExamCode}
             onSelectExam={(code) => setSelectedExamCode(code)}
+            onRefreshExams={(newCode) => refreshExams(newCode)}
             serverHealthy={serverHealthy}
           />
         )}
