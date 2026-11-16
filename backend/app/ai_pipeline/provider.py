@@ -19,12 +19,11 @@ logger = logging.getLogger(__name__)
 
 # Preferred models in order of priority (resilience against 503 high demand spikes and timeouts)
 FALLBACK_MODELS = [
-    "gemini-3-flash-preview",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
     "gemini-flash-lite-latest",
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
 ]
 
 
@@ -156,9 +155,18 @@ class GeminiLLMProvider(BaseLLMProvider):
                             json=payload
                         )
 
-                        # If model has high demand (503), rate limit (429), or not found (404),
-                        # immediately failover to next model in fallback list
-                        if response.status_code in (503, 429, 404):
+                        # If model has transient high demand (503), retry shortly
+                        if response.status_code == 503:
+                            if attempt < settings.AI_MAX_RETRIES:
+                                logger.info(f"Gemini model '{model}' temporarily busy (503). Retrying in 1s (attempt {attempt}/{settings.AI_MAX_RETRIES})...")
+                                await asyncio.sleep(1.0)
+                                continue
+                            else:
+                                logger.warning(f"Gemini model '{model}' 503 on final retry. Failing over to next model...")
+                                break
+
+                        # If rate limit (429) or not found (404), failover immediately to next model
+                        if response.status_code in (429, 404):
                             logger.warning(
                                 f"Gemini model '{model}' returned HTTP {response.status_code} ({response.text[:80]}). "
                                 f"Failing over to next available model..."

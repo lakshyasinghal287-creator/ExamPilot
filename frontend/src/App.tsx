@@ -159,22 +159,18 @@ export function App() {
   }, [currentQIndex, currentQuestion]);
 
   // Launch Full CAT Mock
-  const handleStartExam = async () => {
-    // Ask for candidate name if not set or empty
-    const currentName = candidateName || '';
-    const name = window.prompt('Enter your full name for this test session:', currentName);
-    if (!name || !name.trim()) {
-      if (!currentName) {
-        alert('A name is required to start the exam.');
-        return;
-      }
-    } else {
-      setCandidateName(name.trim());
-      localStorage.setItem('exampilot_name', name.trim());
+  const handleStartExam = async (examCodeOverride?: string) => {
+    // Ensure candidate name is present without blocking prompt if already set
+    let currentName = candidateName.trim() || localStorage.getItem('exampilot_name')?.trim() || '';
+    if (!currentName) {
+      const prompted = window.prompt('Enter your full name for this test session (optional):', 'Candidate');
+      currentName = prompted?.trim() || 'Candidate';
+      setCandidateName(currentName);
+      localStorage.setItem('exampilot_name', currentName);
     }
 
-    // Determine exam code — use first available from backend, fallback to 'CAT-2026'
-    const examCode = selectedExamCode || (availableExams[0]?.code ?? 'CAT-2026');
+    // Determine exam code — use explicit override, selected code, or first available
+    const examCode = examCodeOverride || selectedExamCode || (availableExams[0]?.code ?? 'CAT-2026');
 
     setIsLoading(true);
     setErrorMessage(null);
@@ -438,12 +434,15 @@ export function App() {
           <DashboardHome
             onStartExam={(code) => {
               if (code) setSelectedExamCode(code);
-              handleStartExam();
+              handleStartExam(code);
             }}
             availableExams={availableExams}
             selectedExamCode={selectedExamCode}
             onSelectExam={(code) => setSelectedExamCode(code)}
-            onRefreshExams={(newCode) => refreshExams(newCode)}
+            onRefreshExams={async (newCode) => {
+              await refreshExams(newCode);
+              if (newCode) handleStartExam(newCode);
+            }}
             serverHealthy={serverHealthy}
           />
         )}

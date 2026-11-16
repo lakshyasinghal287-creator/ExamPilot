@@ -62,8 +62,9 @@ export const GenerateAiMockModal: React.FC<GenerateAiMockModalProps> = ({
 
   const handleLaunchExam = () => {
     if (generatedExam?.exam_code) {
-      onExamCreated(generatedExam.exam_code);
+      const code = generatedExam.exam_code;
       onClose();
+      onExamCreated(code);
     }
   };
 
@@ -215,3 +216,4 @@ export const GenerateAiMockModal: React.FC<GenerateAiMockModalProps> = ({
     </div>
   );
 };
+

@@ -347,7 +347,7 @@ async def generate_ai_questions():
 
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
-        model_name="gemini-3.5-flash-lite",
+        model_name=settings.GEMINI_MODEL_NAME,
         generation_config={"response_mime_type": "application/json", "temperature": 0.4}
     )
 
@@ -518,7 +518,7 @@ async def generate_ai_questions():
                 q["verification_metadata"] = {
                     "expression": expr,
                     "sympy_verified": passed,
-                    "engine": "gemini-3.5-flash-lite"
+                    "engine": settings.GEMINI_MODEL_NAME
                 }
 
             n = await save_questions(session, questions, qa_sub.id, default_difficulty=3)
