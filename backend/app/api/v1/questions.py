@@ -2,18 +2,21 @@
 FastAPI Router for Question Generation and Validation Endpoints.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from backend.app.db.session import get_db
 from backend.app.db.models.question import Question
+from backend.app.db.models.exam import SubTopic
 from backend.app.ai_pipeline.pipeline import (
     process_and_validate_question_payload,
     generate_and_validate_question,
 )
+from backend.app.ai_pipeline.provider import get_llm_provider
+from backend.app.ai_pipeline.prompt_builder import build_cat_question_prompt
 
 router = APIRouter(prefix="/questions", tags=["Questions"])
 
@@ -22,6 +25,57 @@ class GenerateQuestionRequest(BaseModel):
     subtopic_id: str
     prompt: str = "Generate a CAT standard Quantitative Ability remainder question."
     system_instruction: str = "You are a senior CAT faculty expert."
+
+
+class LiveGenerateRequest(BaseModel):
+    section_code: str = Field(default="QA", description="VARC, DILR, or QA")
+    topic_name: Optional[str] = Field(default=None, description="Topic name e.g. Number Systems, Algebra, Reading Comprehension")
+    subtopic_code: Optional[str] = Field(default=None, description="Optional subtopic code")
+    difficulty_level: int = Field(default=3, ge=1, le=5)
+    question_type: str = Field(default="MCQ", description="MCQ or TITA")
+
+
+@router.post("/generate-live", status_code=status.HTTP_200_OK)
+async def generate_live_question_endpoint(
+    request: LiveGenerateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Real-time AI question generator powered by Google Gemini (with SymPy mathematical verification).
+    Can be used by student for live targeted practice drills.
+    """
+    prompt, system_instruction = build_cat_question_prompt(
+        section_code=request.section_code,
+        topic_name=request.topic_name,
+        subtopic_code=request.subtopic_code,
+        difficulty_level=request.difficulty_level,
+        question_type=request.question_type
+    )
+
+    provider = get_llm_provider()
+    try:
+        raw_json = await provider.generate_structured_json(prompt, system_instruction)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"AI Provider generation failed: {str(exc)}"
+        )
+
+    # Validate structure & SymPy mathematics
+    result = await process_and_validate_question_payload(raw_json)
+    if not result.is_success:
+        # If SymPy rejected the math or schema had issues, return detailed 422
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Question rejected by verification pipeline: {result.rejection_reason}"
+        )
+
+    return {
+        "status": "VALIDATED",
+        "question": result.validated_schema.model_dump() if result.validated_schema else raw_json,
+        "math_verified": result.math_verification.is_valid if result.math_verification else None,
+        "derivation": result.math_verification.derivation_summary if result.math_verification else None
+    }
 
 
 @router.post("/validate-payload", status_code=status.HTTP_200_OK)

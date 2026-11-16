@@ -5,17 +5,30 @@ interface EdTechNavbarProps {
   activeView: 'dashboard' | 'exam' | 'scorecard';
   serverHealthy: boolean;
   theme: 'light' | 'dark';
+  candidateName?: string;
+  examCode?: string;
   onToggleTheme: () => void;
   onNavigate: (view: 'dashboard' | 'exam' | 'scorecard') => void;
+  onEditCandidateName?: () => void;
 }
 
 export const EdTechNavbar: React.FC<EdTechNavbarProps> = ({
   activeView,
   serverHealthy,
   theme,
+  candidateName,
+  examCode,
   onToggleTheme,
   onNavigate,
+  onEditCandidateName,
 }) => {
+  const displayName = candidateName?.trim() || 'Candidate';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase())
+    .slice(0, 2)
+    .join('') || 'C';
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900/95 backdrop-blur-sm transition-colors">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -32,7 +45,7 @@ export const EdTechNavbar: React.FC<EdTechNavbarProps> = ({
               ExamPilot
             </span>
             <span className="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-              CAT 2026
+              {examCode || 'CAT CBT'}
             </span>
           </div>
         </div>
@@ -60,12 +73,16 @@ export const EdTechNavbar: React.FC<EdTechNavbarProps> = ({
           </button>
 
           {/* User Profile */}
-          <div className="flex items-center space-x-2 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
-            <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950/50 dark:border-indigo-800 dark:text-indigo-300 flex items-center justify-center font-medium text-xs">
-              AS
+          <div
+            onClick={onEditCandidateName}
+            className="flex items-center space-x-2 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800 cursor-pointer group"
+            title="Click to change your candidate name"
+          >
+            <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950/50 dark:border-indigo-800 dark:text-indigo-300 flex items-center justify-center font-medium text-xs group-hover:border-indigo-400 transition-colors">
+              {initials}
             </div>
-            <span className="hidden md:inline text-xs font-medium text-slate-700 dark:text-slate-300">
-              Aarav Sharma
+            <span className="hidden md:inline text-xs font-medium text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              {displayName}
             </span>
           </div>
         </div>

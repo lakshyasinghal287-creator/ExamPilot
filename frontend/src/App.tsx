@@ -6,15 +6,32 @@ import { CatHeader } from './components/exam/CatHeader';
 import { CatPalette } from './components/exam/CatPalette';
 import { CatQuestionPane } from './components/exam/CatQuestionPane';
 import { CatCalculator } from './components/exam/CatCalculator';
-import { examApi } from './services/api';
+import { examApi, ExamInfo } from './services/api';
 import { TestSession, ClientQuestion, PaletteState } from './types/exam';
 
 export function App() {
   const [activeView, setActiveView] = useState<'dashboard' | 'exam' | 'scorecard'>('dashboard');
   const [serverHealthy, setServerHealthy] = useState<boolean>(false);
+
+  // Candidate name — persisted in localStorage, never defaults to a hardcoded name
   const [candidateName, setCandidateName] = useState<string>(() =>
-    localStorage.getItem('exampilot_name') || 'Aarav Sharma'
+    localStorage.getItem('exampilot_name') || ''
   );
+
+  // Persistent anonymous user ID — generated once on first visit, stored in localStorage
+  const [userId] = useState<string>(() => {
+    const stored = localStorage.getItem('exampilot_user_id');
+    if (stored) return stored;
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `user-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem('exampilot_user_id', newId);
+    return newId;
+  });
+
+  // Available exams fetched from backend
+  const [availableExams, setAvailableExams] = useState<ExamInfo[]>([]);
+  const [selectedExamCode, setSelectedExamCode] = useState<string>('');
 
   // Theme State (Light vs Dark Mode)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -50,11 +67,19 @@ export function App() {
 
   const timerRef = useRef<any>(null);
 
-  // Check backend server health at startup
+  // Check backend server health and load available exams at startup
   useEffect(() => {
     examApi
       .checkHealth()
-      .then(() => setServerHealthy(true))
+      .then(() => {
+        setServerHealthy(true);
+        // Load available exams from backend — no hardcoded exam codes
+        return examApi.listExams();
+      })
+      .then((exams) => {
+        setAvailableExams(exams);
+        if (exams.length > 0) setSelectedExamCode(exams[0].code);
+      })
       .catch(() => setServerHealthy(false));
   }, []);
 
@@ -123,18 +148,28 @@ export function App() {
 
   // Launch Full CAT Mock
   const handleStartExam = async () => {
-    // Ask for candidate name if not set
-    const name = window.prompt('Enter your name for this test session:', candidateName);
-    if (name && name.trim()) {
+    // Ask for candidate name if not set or empty
+    const currentName = candidateName || '';
+    const name = window.prompt('Enter your full name for this test session:', currentName);
+    if (!name || !name.trim()) {
+      if (!currentName) {
+        alert('A name is required to start the exam.');
+        return;
+      }
+    } else {
       setCandidateName(name.trim());
       localStorage.setItem('exampilot_name', name.trim());
     }
+
+    // Determine exam code — use first available from backend, fallback to 'CAT-2026'
+    const examCode = selectedExamCode || (availableExams[0]?.code ?? 'CAT-2026');
+
     setIsLoading(true);
     setErrorMessage(null);
     setCompletedSections([]);
     try {
-      // Uses the seeded student user; test_engine falls back to any available user
-      const newSession = await examApi.startTest('seed-student-user-id', 'CAT-2026');
+      // Uses persistent anonymous user ID from localStorage — no hardcoded user
+      const newSession = await examApi.startTest(userId, examCode);
       setSession(newSession);
       setCurrentQIndex(0);
       setTimeRemaining(newSession.active_section.duration_seconds || 2400);
@@ -309,8 +344,9 @@ export function App() {
     return (
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#e6ebef] font-sans select-none">
         <CatHeader
-          examName={session.exam_code ? `Common Admission Test (${session.exam_code})` : 'CAT 2026 Examination'}
-          candidateName={candidateName}
+          examName={session.exam_code ? `Common Admission Test (${session.exam_code})` : 'CAT Examination'}
+          examCode={session.exam_code}
+          candidateName={candidateName || 'Candidate'}
           activeSectionCode={session.active_section.code}
           timeRemainingSeconds={timeRemaining}
           completedSections={completedSections}
@@ -356,8 +392,17 @@ export function App() {
         activeView={activeView}
         serverHealthy={serverHealthy}
         theme={theme}
+        candidateName={candidateName}
+        examCode={selectedExamCode || availableExams[0]?.code}
         onToggleTheme={toggleTheme}
         onNavigate={(v) => setActiveView(v)}
+        onEditCandidateName={() => {
+          const name = window.prompt('Update your candidate name:', candidateName);
+          if (name && name.trim()) {
+            setCandidateName(name.trim());
+            localStorage.setItem('exampilot_name', name.trim());
+          }
+        }}
       />
 
       <div className="flex-1 flex flex-col relative">
@@ -379,8 +424,13 @@ export function App() {
 
         {activeView === 'dashboard' && (
           <DashboardHome
-            onStartExam={handleStartExam}
-            onOpenPractice={() => alert('Practice drill selector: Select Section, Subtopic, and Target Difficulty.')}
+            onStartExam={(code) => {
+              if (code) setSelectedExamCode(code);
+              handleStartExam();
+            }}
+            availableExams={availableExams}
+            selectedExamCode={selectedExamCode}
+            onSelectExam={(code) => setSelectedExamCode(code)}
             serverHealthy={serverHealthy}
           />
         )}
@@ -388,6 +438,7 @@ export function App() {
         {activeView === 'scorecard' && (
           <ScorecardView
             scorecardData={scorecardData}
+            candidateName={candidateName}
             onBackToDashboard={() => setActiveView('dashboard')}
           />
         )}

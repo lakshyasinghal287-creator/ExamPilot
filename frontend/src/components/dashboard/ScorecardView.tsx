@@ -49,6 +49,7 @@ interface Recommendation {
 
 interface ScorecardViewProps {
   scorecardData: any;
+  candidateName?: string;
   onBackToDashboard: () => void;
 }
 
@@ -80,6 +81,7 @@ function QuadrantBadge({ quadrant, label }: { quadrant: string; label: string })
 
 export const ScorecardView: React.FC<ScorecardViewProps> = ({
   scorecardData,
+  candidateName,
   onBackToDashboard,
 }) => {
   const [showAllQuestions, setShowAllQuestions] = useState(false);
@@ -128,6 +130,11 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">
               Performance Report
             </h1>
+            {candidateName && (
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-1">
+                Candidate: {candidateName}
+              </p>
+            )}
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Evaluated under official CAT marking rubric (+3 / -1 / 0)
             </p>

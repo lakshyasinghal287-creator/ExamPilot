@@ -5,6 +5,7 @@ interface CatPaletteProps {
   questions: ClientQuestion[];
   currentQuestionIndex: number;
   candidateName: string;
+  rollNumber?: string;
   activeSectionCode?: string;
   onSelectQuestion: (index: number) => void;
   onSubmitSection?: () => void;
@@ -15,6 +16,7 @@ export const CatPalette: React.FC<CatPaletteProps> = ({
   questions,
   currentQuestionIndex,
   candidateName,
+  rollNumber,
   activeSectionCode,
   onSelectQuestion,
   onSubmitSection,
@@ -68,7 +70,9 @@ export const CatPalette: React.FC<CatPaletteProps> = ({
         <div>
           <div className="text-[10px] text-stone-400 uppercase font-semibold">Candidate</div>
           <div className="text-xs font-bold text-[#1b3b55] leading-tight">{candidateName}</div>
-          <div className="text-[10px] text-stone-500 font-mono">Roll No: 26CAT9041</div>
+          <div className="text-[10px] text-stone-500 font-mono">
+            {rollNumber || `ID: ${candidateName ? candidateName.replace(/\s+/g, '').slice(0, 4).toUpperCase() : 'USER'}-${Math.abs((candidateName || 'CAT').split('').reduce((acc, c) => ((acc << 5) - acc) + c.charCodeAt(0), 0) % 9000 + 1000)}`}
+          </div>
         </div>
       </div>
 

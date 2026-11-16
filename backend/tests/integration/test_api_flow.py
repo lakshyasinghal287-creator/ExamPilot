@@ -189,3 +189,55 @@ async def test_full_test_taking_and_scoring_flow(integration_db_and_client):
     assert finish_data["total_score"] == 3.0  # +3 for correct MCQ!
     assert finish_data["sectional_scores"]["VARC"] == 3.0
     assert finish_data["overall_accuracy_percentage"] == 100.0
+
+
+@pytest.mark.asyncio
+async def test_list_exams_endpoint(integration_db_and_client):
+    client = integration_db_and_client["client"]
+    res = await client.get("/api/v1/exams/")
+    assert res.status_code == 200
+    data = res.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert data[0]["code"] == "CAT-2026"
+    assert len(data[0]["sections"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_generate_live_question_endpoint(integration_db_and_client, monkeypatch):
+    client = integration_db_and_client["client"]
+    from backend.app.ai_pipeline.provider import MockLLMProvider
+    from backend.app.api.v1 import questions
+
+    mock_payload = {
+        "section_code": "QA",
+        "topic_code": "QA-NUM",
+        "subtopic_code": "QA-NUM-REMAINDERS",
+        "question_type": "MCQ",
+        "question_text": "What is the remainder when 5^3 is divided by 4?",
+        "options": [
+            {"option_key": "A", "option_text": "1", "is_correct": True},
+            {"option_key": "B", "option_text": "2", "is_correct": False},
+            {"option_key": "C", "option_text": "3", "is_correct": False},
+            {"option_key": "D", "option_text": "0", "is_correct": False}
+        ],
+        "correct_answer": "A",
+        "explanation": "5 = 1 mod 4. 1^3 = 1.",
+        "difficulty_level": 2,
+        "verification_expression": "pow(5, 3, 4)"
+    }
+
+    monkeypatch.setattr(questions, "get_llm_provider", lambda: MockLLMProvider(custom_payload=mock_payload))
+
+    req_payload = {
+        "section_code": "QA",
+        "topic_name": "Number Systems & Remainders",
+        "difficulty_level": 2,
+        "question_type": "MCQ"
+    }
+    res = await client.post("/api/v1/questions/generate-live", json=req_payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "VALIDATED"
+    assert data["math_verified"] is True
+    assert data["question"]["correct_answer"] == "A"

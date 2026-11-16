@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     # AI Subsystem Configuration
     AI_PROVIDER: Literal["gemini", "mock"] = "gemini"
     GEMINI_API_KEY: str = Field(default="", description="Google Gemini API Key for question generation")
-    GEMINI_MODEL_NAME: str = "gemini-1.5-flash"
-    AI_REQUEST_TIMEOUT_SECONDS: int = 30
+    GEMINI_MODEL_NAME: str = "gemini-3-flash-preview"
+    AI_REQUEST_TIMEOUT_SECONDS: int = 25
     AI_MAX_RETRIES: int = 3
 
     # Logging

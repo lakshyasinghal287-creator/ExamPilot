@@ -10,6 +10,20 @@ const apiClient = axios.create({
   },
 });
 
+export interface ExamInfo {
+  code: string;
+  name: string;
+  total_duration_minutes: number;
+  total_questions: number;
+  sections: {
+    code: string;
+    name: string;
+    sequence_order: number;
+    duration_minutes: number;
+    target_question_count: number;
+  }[];
+}
+
 export const examApi = {
   // Check backend server status
   async checkHealth() {
@@ -17,8 +31,14 @@ export const examApi = {
     return res.data;
   },
 
+  // List all available exams
+  async listExams(): Promise<ExamInfo[]> {
+    const res = await apiClient.get<ExamInfo[]>('/exams/');
+    return res.data;
+  },
+
   // Start a new test attempt
-  async startTest(userId: string, examCode: string = 'CAT-2026'): Promise<TestSession> {
+  async startTest(userId: string, examCode: string): Promise<TestSession> {
     const res = await apiClient.post<TestSession>('/tests/start', {
       user_id: userId,
       exam_code: examCode,
@@ -49,6 +69,24 @@ export const examApi = {
   // Final exam submission and scoring
   async finishExam(attemptId: string) {
     const res = await apiClient.post(`/tests/${attemptId}/finish`);
+    return res.data;
+  },
+
+  // Fetch analytics for a user
+  async getUserAnalytics(userId: string) {
+    const res = await apiClient.get(`/analytics/users/${userId}`);
+    return res.data;
+  },
+
+  // Generate a live question via Gemini AI with SymPy verification
+  async generateLiveQuestion(params: {
+    section_code: string;
+    topic_name?: string;
+    subtopic_code?: string;
+    difficulty_level?: number;
+    question_type?: string;
+  }) {
+    const res = await apiClient.post('/questions/generate-live', params);
     return res.data;
   },
 };

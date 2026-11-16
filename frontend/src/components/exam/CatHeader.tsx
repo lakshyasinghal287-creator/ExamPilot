@@ -2,6 +2,7 @@ import { Calculator, FileText, Clock } from 'lucide-react';
 
 interface CatHeaderProps {
   examName: string;
+  examCode?: string;
   candidateName: string;
   activeSectionCode: string;
   timeRemainingSeconds: number;
@@ -13,6 +14,7 @@ interface CatHeaderProps {
 
 export const CatHeader: React.FC<CatHeaderProps> = ({
   examName,
+  examCode,
   candidateName,
   activeSectionCode,
   timeRemainingSeconds,
@@ -39,7 +41,7 @@ export const CatHeader: React.FC<CatHeaderProps> = ({
       <div className="px-4 py-2 flex items-center justify-between border-b border-[#4d6d87]/60">
         <div className="flex items-center space-x-3">
           <div className="px-2 py-0.5 bg-[#253e52] border border-[#4d6d87] text-white font-bold text-xs tracking-wider rounded-xs">
-            CAT 2026
+            {examCode || 'CAT'}
           </div>
           <div className="text-xs font-semibold text-white tracking-wide">
             {examName}
